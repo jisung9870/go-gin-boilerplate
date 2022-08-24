@@ -20,27 +20,20 @@ type User struct {
 
 type UserModel struct{}
 
-var authModel = new(AuthModel)
-
-func (m UserModel) Login(form forms.Login) (User, string, error) {
+func (m UserModel) Login(form forms.Login) (User, error) {
 	var user User
 	db := database.GetDB()
 
 	result := db.Where("Email = ?", form.Email).Find(&user)
 	if result.Error != nil {
-		return user, "", result.Error
+		return user, result.Error
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)); err != nil {
-		return user, "", errors.New("password is wrong")
-	}
-
-	token, err := authModel.CreateToken(&user)
-	if err != nil {
-		return user, "", errors.New("jwt generation error")
+		return user, errors.New("password is wrong")
 	}
 
 	user.Password = ""
-	return user, token, nil
+	return user, nil
 }
 
 func (m UserModel) Register(form forms.Register) (User, error) {

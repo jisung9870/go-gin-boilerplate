@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 
+	"github.com/JisungPark0319/go-gin-boilerplate/auth"
 	"github.com/JisungPark0319/go-gin-boilerplate/forms"
 	"github.com/JisungPark0319/go-gin-boilerplate/models"
 	"github.com/gin-gonic/gin"
@@ -20,13 +21,22 @@ func (u UsersController) Login(c *gin.Context) {
 		return
 	}
 
-	user, token, err := userModel.Login(loginForm)
+	user, err := userModel.Login(loginForm)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user, "jwt": token})
+	token, err := auth.CreateAuth(user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":          user,
+		"access_token":  token.AccessToken,
+		"refresh_token": token.RefreshToken,
+	})
 }
 
 func (u UsersController) Register(c *gin.Context) {
