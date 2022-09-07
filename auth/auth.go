@@ -28,11 +28,11 @@ func CreateAuth(user models.User) (Tokens, error) {
 	tokens := Tokens{}
 
 	var err error
-	tokens.AccessToken, err = createAccessToken(user)
+	tokens.AccessToken, err = createAccessToken()
 	if err != nil {
 		return tokens, err
 	}
-	tokens.RefreshToken, err = createRefreshToken(user)
+	tokens.RefreshToken, err = createRefreshToken()
 	if err != nil {
 		return tokens, err
 	}
@@ -46,11 +46,13 @@ func DeleteAuth(tokens Tokens) error {
 
 func Refresh(tokens Tokens) (Tokens, error) {
 	reTokens := Tokens{}
+
 	ok, err := accessToken.Verify(tokens.AccessToken)
-	if err != nil {
+	if ok {
+		return reTokens, fmt.Errorf("Token is not expired")
+	}
+	if err != nil && err.Error() != "Token is expired" {
 		return reTokens, err
-	} else if ok {
-		return reTokens, fmt.Errorf("access token not expired")
 	}
 
 	ok, err = refreshToken.Verify(tokens.RefreshToken)
@@ -64,15 +66,14 @@ func Refresh(tokens Tokens) (Tokens, error) {
 		return reTokens, err
 	}
 
-	accessMetadata, _ := accessToken.ExtractTokenMetaData(tokens.AccessToken)
-	atExpire := time.Now().Add(time.Minute * 15).Unix()
-	accessMetadata["exp"] = atExpire
-	reTokens.AccessToken, _ = accessToken.CreateToken(accessMetadata)
-
-	refreshMetadata, _ := refreshToken.ExtractTokenMetaData(tokens.RefreshToken)
-	rtExpire := time.Now().Add(time.Minute * 1).Unix()
-	refreshMetadata["exp"] = rtExpire
-	reTokens.RefreshToken, _ = refreshToken.CreateToken(refreshMetadata)
+	reTokens.AccessToken, err = createAccessToken()
+	if err != nil {
+		return reTokens, err
+	}
+	reTokens.RefreshToken, _ = createRefreshToken()
+	if err != nil {
+		return reTokens, err
+	}
 
 	return reTokens, nil
 }
@@ -84,19 +85,17 @@ func VerifyAccessToken(token string) (bool, error) {
 	return true, nil
 }
 
-func createAccessToken(user models.User) (string, error) {
+func createAccessToken() (string, error) {
 	metadata := make(map[string]interface{})
 
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		return "", err
 	}
-	expire := time.Now().Add(time.Minute * 15).Unix()
+	expire := time.Now().Add(time.Minute * 1).Unix()
 
 	metadata["access_uuid"] = uuid.String()
 	metadata["exp"] = expire
-	metadata["email"] = user.Email
-	metadata["user_id"] = user.ID
 
 	tk, err := accessToken.CreateToken(metadata)
 	if err != nil {
@@ -105,7 +104,7 @@ func createAccessToken(user models.User) (string, error) {
 	return tk, nil
 }
 
-func createRefreshToken(user models.User) (string, error) {
+func createRefreshToken() (string, error) {
 	metadata := make(map[string]interface{})
 
 	uuid, err := uuid.NewUUID()
@@ -116,10 +115,8 @@ func createRefreshToken(user models.User) (string, error) {
 
 	metadata["refresh_uuid"] = uuid.String()
 	metadata["exp"] = expire
-	metadata["email"] = user.Email
-	metadata["user_id"] = user.ID
 
-	tk, err := accessToken.CreateToken(metadata)
+	tk, err := refreshToken.CreateToken(metadata)
 	if err != nil {
 		return "", err
 	}

@@ -29,7 +29,6 @@ func (tk *Token) CreateToken(metadata map[string]interface{}) (string, error) {
 
 func (tk *Token) ExtractToken(bearToken string) (*jwt.Token, error) {
 	strArr := strings.Split(bearToken, " ")
-	fmt.Println(strArr)
 	if len(strArr) != 2 || !(strArr[0] == "Bearer" || strArr[0] == "bearer") {
 		return nil, fmt.Errorf("bearer token not in format")
 	}
@@ -56,12 +55,10 @@ func (tk *Token) Verify(bearToken string) (bool, error) {
 
 func (tk *Token) ExtractTokenMetaData(bearToken string) (map[string]interface{}, error) {
 	token, err := tk.ExtractToken(bearToken)
-
 	if err != nil {
 		return nil, err
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
-
 	if ok && token.Valid {
 		return claims, nil
 	} else {

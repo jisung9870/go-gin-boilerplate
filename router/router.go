@@ -12,6 +12,7 @@ func Run() {
 	{
 		v1.HealthCheck(routerV1.Group("/health"))
 		v1.User(routerV1.Group("/user"))
+		v1.Auth(routerV1.Group("/auth"))
 	}
 
 	router.Run()

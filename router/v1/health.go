@@ -7,7 +7,7 @@ import (
 )
 
 func HealthCheck(router *gin.RouterGroup) {
-	router.GET("/health", func(ctx *gin.Context) {
+	router.GET("/", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "OK")
 	})
 }
