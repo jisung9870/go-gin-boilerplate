@@ -10,11 +10,12 @@ import (
 type AuthController struct{}
 
 func (au AuthController) Refresh(c *gin.Context) {
+	jwtAuth := auth.Get()
 	tokens := auth.Tokens{}
 	tokens.AccessToken = c.GetHeader("Authorization")
 	tokens.RefreshToken = c.GetHeader("Authorization-Refresh")
 
-	reTokens, err := auth.Refresh(tokens)
+	reTokens, err := jwtAuth.Refresh(tokens)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return

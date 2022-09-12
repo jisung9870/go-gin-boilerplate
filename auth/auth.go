@@ -1,14 +1,17 @@
 package auth
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
-	"github.com/JisungPark0319/go-gin-boilerplate/models"
 	"github.com/google/uuid"
 )
 
 type Auth struct {
+	access        Token
+	refresh       Token
+	accessExpire  time.Duration
+	refreshExpire time.Duration
 }
 
 type Tokens struct {
@@ -16,109 +19,144 @@ type Tokens struct {
 	RefreshToken string
 }
 
-var accessToken = Token{
-	Secret: "qwerasdf",
+type tokenDetail struct {
+	token  Token
+	expire time.Duration
 }
 
-var refreshToken = Token{
-	Secret: "qwerasdf",
+type Claims map[string]interface{}
+
+var auth *Auth
+
+func New(accessSecret, refreshSecret string) error {
+	if auth != nil {
+		return errors.New("Auth instance exists")
+	}
+	auth = &Auth{
+		access:        Token{Secret: accessSecret},
+		refresh:       Token{Secret: refreshSecret},
+		accessExpire:  time.Minute * 10,
+		refreshExpire: time.Hour * 1,
+	}
+	return nil
 }
 
-func CreateAuth(user models.User) (Tokens, error) {
+func Get() *Auth {
+	return auth
+}
+
+func (a *Auth) SetExpire(accessExpire, refreshExpire time.Duration) {
+	a.accessExpire = accessExpire
+	a.refreshExpire = refreshExpire
+}
+
+func (a Auth) Create(claims Claims) (Tokens, error) {
 	tokens := Tokens{}
 
 	var err error
-	tokens.AccessToken, err = createAccessToken()
+
+	tokens.AccessToken, err = a.CreateToken("access", claims)
 	if err != nil {
 		return tokens, err
 	}
-	tokens.RefreshToken, err = createRefreshToken()
+	tokens.AccessToken = "Bearer " + tokens.AccessToken
+
+	tokens.RefreshToken, err = a.CreateToken("refresh", claims)
 	if err != nil {
 		return tokens, err
 	}
+	tokens.RefreshToken = "Bearer " + tokens.RefreshToken
+
+	// TODO: Store info in Database
 
 	return tokens, nil
 }
 
-func DeleteAuth(tokens Tokens) error {
-	return nil
-}
-
-func Refresh(tokens Tokens) (Tokens, error) {
-	reTokens := Tokens{}
-
-	ok, err := accessToken.Verify(tokens.AccessToken)
-	if ok {
-		return reTokens, fmt.Errorf("Token is not expired")
-	}
-	if err != nil && err.Error() != "Token is expired" {
-		return reTokens, err
+func (a Auth) Refresh(tokens Tokens) (Tokens, error) {
+	ok, err := a.access.Verify(tokens.AccessToken)
+	if err != nil || ok {
+		if ok {
+			err = errors.New("Token has not expired")
+		}
+		return Tokens{}, err
 	}
 
-	ok, err = refreshToken.Verify(tokens.RefreshToken)
+	ok, err = a.refresh.Verify(tokens.RefreshToken)
+	if err != nil || !ok {
+		if !ok {
+			err = errors.New("Token is expired")
+		}
+		return Tokens{}, err
+	}
+
+	accessClaims, err := a.access.ExtractTokenMetaData(tokens.AccessToken)
 	if err != nil {
-		return reTokens, err
-	} else if !ok {
-		return reTokens, fmt.Errorf("refresh token verification failed")
+		return Tokens{}, err
 	}
-
-	if err = DeleteAuth(tokens); err != nil {
-		return reTokens, err
-	}
-
-	reTokens.AccessToken, err = createAccessToken()
+	refreshClaims, err := a.refresh.ExtractTokenMetaData(tokens.RefreshToken)
 	if err != nil {
-		return reTokens, err
+		return Tokens{}, err
 	}
-	reTokens.RefreshToken, _ = createRefreshToken()
+	if accessClaims["access_uuid"] != refreshClaims["access_uuid"] {
+		return Tokens{}, errors.New("claim values for access token and refresh token are different")
+	}
+	// TODO: Compare with database info
+
+	reTokens, err := a.Create(accessClaims)
 	if err != nil {
-		return reTokens, err
+		return Tokens{}, err
 	}
 
 	return reTokens, nil
 }
 
-func VerifyAccessToken(token string) (bool, error) {
-	if ok, err := accessToken.Verify(token); err != nil || !ok {
-		return false, err
-	}
-	return true, nil
+func (a Auth) Verify(tokenType string, tokenStr string) (bool, error) {
+	token := a.tokenSelect(tokenType).token
+
+	ok, err := token.Verify(tokenStr)
+	return ok, err
 }
 
-func createAccessToken() (string, error) {
-	metadata := make(map[string]interface{})
+func (a Auth) ExtractClaims(tokenType string, tokenStr string) (Claims, error) {
+	token := a.tokenSelect(tokenType).token
 
-	uuid, err := uuid.NewUUID()
+	claims, err := token.ExtractTokenMetaData(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
+
+// TODO: Delete info in Database
+// func DeleteAuth(tokens Tokens) error {
+// 	return nil
+// }
+
+func (a Auth) CreateToken(tokenType string, claims Claims) (string, error) {
+	td := a.tokenSelect(tokenType)
+
+	uuid := uuid.New()
+
+	claims[tokenType+"_uuid"] = uuid.String()
+	claims["exp"] = time.Now().Add(td.expire).Unix()
+
+	tk, err := td.token.CreateToken(claims)
 	if err != nil {
 		return "", err
 	}
-	expire := time.Now().Add(time.Minute * 1).Unix()
 
-	metadata["access_uuid"] = uuid.String()
-	metadata["exp"] = expire
-
-	tk, err := accessToken.CreateToken(metadata)
-	if err != nil {
-		return "", err
-	}
 	return tk, nil
 }
 
-func createRefreshToken() (string, error) {
-	metadata := make(map[string]interface{})
-
-	uuid, err := uuid.NewUUID()
-	if err != nil {
-		return "", err
+func (a Auth) tokenSelect(tokenType string) tokenDetail {
+	var td tokenDetail
+	switch tokenType {
+	case "access":
+		td.token = a.access
+		td.expire = a.accessExpire
+	case "refresh":
+		td.token = a.refresh
+		td.expire = a.refreshExpire
 	}
-	expire := time.Now().Add(time.Hour * 1).Unix()
-
-	metadata["refresh_uuid"] = uuid.String()
-	metadata["exp"] = expire
-
-	tk, err := refreshToken.CreateToken(metadata)
-	if err != nil {
-		return "", err
-	}
-	return tk, nil
+	return td
 }

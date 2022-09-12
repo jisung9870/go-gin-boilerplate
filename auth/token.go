@@ -11,6 +11,8 @@ type Token struct {
 	Secret string
 }
 
+var tokenExpireErrStr = "Token is expired"
+
 func (tk *Token) CreateToken(metadata map[string]interface{}) (string, error) {
 	claims := jwt.MapClaims{}
 
@@ -39,15 +41,16 @@ func (tk *Token) ExtractToken(bearToken string) (*jwt.Token, error) {
 		}
 		return []byte(tk.Secret), nil
 	})
+
 	if err != nil {
-		return nil, err
+		return token, err
 	}
 	return token, nil
 }
 
 func (tk *Token) Verify(bearToken string) (bool, error) {
 	token, err := tk.ExtractToken(bearToken)
-	if err != nil {
+	if err != nil && err.Error() != tokenExpireErrStr {
 		return false, err
 	}
 	return token.Valid, nil
@@ -55,13 +58,12 @@ func (tk *Token) Verify(bearToken string) (bool, error) {
 
 func (tk *Token) ExtractTokenMetaData(bearToken string) (map[string]interface{}, error) {
 	token, err := tk.ExtractToken(bearToken)
-	if err != nil {
+	if err != nil && err.Error() != tokenExpireErrStr {
 		return nil, err
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
-	if ok && token.Valid {
-		return claims, nil
-	} else {
+	if !ok {
 		return nil, fmt.Errorf("extraction of token information failed")
 	}
+	return claims, nil
 }
