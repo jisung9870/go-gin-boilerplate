@@ -11,7 +11,8 @@ func Authorization() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		jwtAuth := auth.Get()
 		accessToken := c.GetHeader("Authorization")
-		ok, err := jwtAuth.Verify("access", accessToken)
+		ok, err := jwtAuth.AccessVerify(accessToken)
+
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
