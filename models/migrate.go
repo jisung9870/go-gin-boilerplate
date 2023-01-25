@@ -5,6 +5,7 @@ import "github.com/JisungPark0319/go-gin-boilerplate/database"
 func AutoMigrate() error {
 	var models = []interface{}{
 		&User{},
+		&Board{},
 	}
 
 	err := database.AutoMigrate(models)
