@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/JisungPark0319/go-gin-boilerplate/config"
 	"github.com/google/uuid"
 )
 
@@ -28,13 +29,13 @@ type Claims map[string]interface{}
 
 var auth *Auth
 
-func New(accessSecret, refreshSecret string) error {
+func New(cfg config.AuthConfig) error {
 	if auth != nil {
 		return errors.New("Auth instance exists")
 	}
 	auth = &Auth{
-		access:        Token{Secret: accessSecret},
-		refresh:       Token{Secret: refreshSecret},
+		access:        Token{Secret: cfg.AccessSecret},
+		refresh:       Token{Secret: cfg.RefreshSecret},
 		accessExpire:  time.Minute * 10,
 		refreshExpire: time.Hour * 1,
 	}

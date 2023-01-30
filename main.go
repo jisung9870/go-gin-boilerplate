@@ -1,26 +1,39 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"time"
 
 	"github.com/JisungPark0319/go-gin-boilerplate/auth"
+	"github.com/JisungPark0319/go-gin-boilerplate/config"
 	"github.com/JisungPark0319/go-gin-boilerplate/database"
 	"github.com/JisungPark0319/go-gin-boilerplate/models"
 	"github.com/JisungPark0319/go-gin-boilerplate/router"
 	"github.com/gin-gonic/gin"
 )
 
+var (
+	configPath string
+)
+
 func main() {
+	var err error
+
+	flag.StringVar(&configPath, "config", "./config.yaml", "Specify config file path")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(configPath, "GIN")
+	if err != nil {
+		panic(err)
+	}
 	engine := gin.Default()
 
-	database.Init()
-	err := models.AutoMigrate()
+	database.Init(cfg.DatabaseConfig)
+	err = models.AutoMigrate()
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
-	auth.New("accessSecret", "refreshSecret")
+	auth.New(cfg.AuthConfig)
 	auth.Get().SetExpire(time.Minute*10, time.Hour*1)
 
 	engine.Use(gin.Logger())
