@@ -36,7 +36,7 @@ func main() {
 	auth.New(cfg.AuthConfig)
 	auth.Get().SetExpire(time.Minute*10, time.Hour*1)
 
-	engine.Use(gin.Logger())
+	// engine.Use(gin.Logger())
 
 	router.Set(engine)
 	engine.Run()
