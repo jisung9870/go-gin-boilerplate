@@ -152,6 +152,15 @@ func (a Auth) RefreshExtractClaims(tokenStr string) (Claims, error) {
 	return a.extractClaims("refresh", tokenStr)
 }
 
+func (a Auth) GetAccesssClaims(jwt string, key string) (string, error) {
+	claims, err := a.AccessExtractClaims(jwt)
+	if err != nil {
+		return "", err
+	}
+
+	return claims[key].(string), nil
+}
+
 // Token expiration verify
 func (a Auth) verify(tokenType string, tokenStr string) (bool, error) {
 	token := a.tokenSelect(tokenType).token

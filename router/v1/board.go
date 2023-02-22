@@ -11,4 +11,6 @@ func Board(router *gin.RouterGroup) {
 	router.Use(middlewares.Authorization())
 
 	router.POST("/", boardController.CreateBoard)
+	router.GET("/", boardController.GetBoardList)
+	router.DELETE("/", boardController.DeleteBoard)
 }
