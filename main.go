@@ -37,11 +37,6 @@ func main() {
 		panic(err)
 	}
 
-	trace := trace.Trace{
-		Endpoint:    "http://localhost:14268/api/traces",
-		ServiceName: "gin-tempo",
-	}
-
 	engine := gin.Default()
 
 	engine.Use(gin.Recovery())
@@ -54,7 +49,8 @@ func main() {
 	auth.New(cfg.AuthConfig)
 	auth.Get().SetExpire(time.Minute*10, time.Hour*1)
 
-	err = trace.Init()
+	trace := trace.Trace{}
+	err = trace.Init(cfg.TraceConfig)
 	if err != nil {
 		panic(err)
 	}

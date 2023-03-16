@@ -36,6 +36,7 @@ func LoadFile(path string, cfg *Config) error {
 type Config struct {
 	DatabaseConfig DatabaseConfig `yaml:"database"`
 	AuthConfig     AuthConfig     `yaml:"auth"`
+	TraceConfig    TraceConfig    `yaml:"trace"`
 }
 
 type DatabaseConfig struct {
@@ -49,4 +50,9 @@ type DatabaseConfig struct {
 type AuthConfig struct {
 	AccessSecret  string `yaml:"accessSecret"`
 	RefreshSecret string `yaml:"refreshSecret"`
+}
+
+type TraceConfig struct {
+	Endpoint    string `yaml:"endpoint"`
+	ServiceName string `yaml:"serviceName"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/JisungPark0319/go-gin-boilerplate/config"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -21,7 +22,9 @@ type Trace struct {
 	TracerProvider *sdktrace.TracerProvider
 }
 
-func (t *Trace) Init() error {
+func (t *Trace) Init(cfg config.TraceConfig) error {
+	t.Endpoint = cfg.Endpoint
+	t.ServiceName = cfg.ServiceName
 	tp, err := initTracer(t.Endpoint, t.ServiceName)
 	if err != nil {
 		return err
