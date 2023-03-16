@@ -14,6 +14,7 @@ type UsersController struct{}
 var userModel = new(models.UserModel)
 
 func (u UsersController) Login(c *gin.Context) {
+	ctx := c.Request.Context()
 	var loginForm forms.Login
 	jwtAuth := auth.Get()
 
@@ -22,7 +23,7 @@ func (u UsersController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := userModel.Login(loginForm)
+	user, err := userModel.LoginWithContext(ctx, loginForm)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -44,6 +45,8 @@ func (u UsersController) Login(c *gin.Context) {
 }
 
 func (u UsersController) Register(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	var registerForm forms.Register
 
 	if err := c.ShouldBindJSON(&registerForm); err != nil {
@@ -51,7 +54,7 @@ func (u UsersController) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := userModel.Register(registerForm)
+	user, err := userModel.RegisterWithContext(ctx, registerForm)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

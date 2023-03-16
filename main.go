@@ -10,6 +10,7 @@ import (
 	"github.com/JisungPark0319/go-gin-boilerplate/database"
 	"github.com/JisungPark0319/go-gin-boilerplate/models"
 	"github.com/JisungPark0319/go-gin-boilerplate/router"
+	"github.com/JisungPark0319/go-gin-boilerplate/trace"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,6 +37,11 @@ func main() {
 		panic(err)
 	}
 
+	trace := trace.Trace{
+		Endpoint:    "http://localhost:14268/api/traces",
+		ServiceName: "gin-tempo",
+	}
+
 	engine := gin.Default()
 
 	engine.Use(gin.Recovery())
@@ -47,6 +53,15 @@ func main() {
 	}
 	auth.New(cfg.AuthConfig)
 	auth.Get().SetExpire(time.Minute*10, time.Hour*1)
+
+	err = trace.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer trace.Close()
+	trace.Provider()
+	trace.GinMiddleware(engine)
+	trace.GormMiddleware(database.GetDB())
 
 	router.Set(engine)
 	engine.Run()
